@@ -7,7 +7,7 @@ pipeline {
     
     environment {
         FIREBASE_TOKEN = credentials('FIREBASE_TOKEN')
-        FIREBASE_PROJECT = 'toandk-workshop2'
+        FIREBASE_PROJECT = 'toandk-jenkins-workshop2'
         REMOTE_USER = 'newbie'
         REMOTE_HOST = '118.69.34.46'
         REMOTE_PORT = '3334'
@@ -49,6 +49,8 @@ pipeline {
         }
         
         stage('Deploy') {
+            // Temporarily disable Firebase deploy to focus on Remote deploy
+            /*
             parallel {
                 stage('Deploy to Firebase') {
                     steps {
@@ -67,6 +69,8 @@ pipeline {
                 }
                 
                 stage('Deploy to Remote Server') {
+            */
+            stage('Deploy to Remote Server') {
                     steps {
                         echo 'Deploying to Remote Server...'
                         dir('web-performance-project1-initial') {
@@ -112,7 +116,8 @@ pipeline {
                         }
                     }
                 }
-            }
+            // End of parallel block
+            */
         }
     }
     
