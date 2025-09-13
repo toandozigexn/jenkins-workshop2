@@ -1,0 +1,6 @@
+slack:latest
+ssh-agent:latest
+nodejs:latest
+workflow-aggregator:latest
+git:latest
+github:latest
