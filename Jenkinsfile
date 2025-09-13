@@ -56,7 +56,11 @@ pipeline {
                         dir('web-performance-project1-initial') {
                             sh '''
                                 echo "Deploying to Firebase Hosting..."
-                                firebase deploy --token "$FIREBASE_TOKEN" --only hosting --project="$FIREBASE_PROJECT" --non-interactive
+                                # Sử dụng token với GOOGLE_APPLICATION_CREDENTIALS
+                                export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase-token.json"
+                                echo "$FIREBASE_TOKEN" > /tmp/firebase-token.json
+                                firebase deploy --only hosting --project="$FIREBASE_PROJECT" --non-interactive
+                                rm -f /tmp/firebase-token.json
                             '''
                         }
                     }
@@ -115,6 +119,17 @@ pipeline {
     post {
         success {
             echo 'Pipeline succeeded!'
+            echo "✅ Deployment Successful!"
+            echo "Developer: ${GIT_AUTHOR}"
+            echo "Commit: ${GIT_COMMIT_MSG}"
+            echo "Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            echo "Time: ${DEPLOY_TIME}"
+            echo "Firebase: ${FIREBASE_URL}"
+            echo "Remote Server: ${REMOTE_URL}"
+            echo "Build Logs: ${env.BUILD_URL}"
+            
+            // Slack notification - temporarily disabled
+            /*
             slackSend(
                 channel: '#lnd-2025-workshop',
                 color: 'good',
@@ -130,9 +145,19 @@ pipeline {
 • Remote Server: ${REMOTE_URL}
 • Build Logs: ${env.BUILD_URL}"""
             )
+            */
         }
         failure {
             echo 'Pipeline failed!'
+            echo "❌ Deployment Failed!"
+            echo "Developer: ${GIT_AUTHOR}"
+            echo "Commit: ${GIT_COMMIT_MSG}"
+            echo "Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            echo "Time: ${DEPLOY_TIME}"
+            echo "Check Logs: ${env.BUILD_URL}"
+            
+            // Slack notification - temporarily disabled
+            /*
             slackSend(
                 channel: '#lnd-2025-workshop',
                 color: 'danger',
@@ -144,6 +169,7 @@ pipeline {
 *Time:* ${DEPLOY_TIME}
 *Check Logs:* ${env.BUILD_URL}"""
             )
+            */
         }
         always {
             echo 'Pipeline completed!'
