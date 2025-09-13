@@ -104,6 +104,7 @@ pipeline {
             slackSend(
                 channel: '#lnd-2025-workshop',
                 color: 'good',
+                tokenCredentialId: 'SLACK_TOKEN',
                 message: "${USERNAME} deploy ${env.JOB_NAME} #${env.BUILD_NUMBER} successful! ✅\nFirebase: https://${FIREBASE_PROJECT}.web.app\nRemote: http://${REMOTE_HOST}/jenkins/${USERNAME}2/current/"
             )
         }
@@ -112,6 +113,7 @@ pipeline {
             slackSend(
                 channel: '#lnd-2025-workshop',
                 color: 'danger',
+                tokenCredentialId: 'SLACK_TOKEN',
                 message: "${USERNAME} deploy ${env.JOB_NAME} #${env.BUILD_NUMBER} failed! ❌\nCheck logs: ${env.BUILD_URL}"
             )
         }
