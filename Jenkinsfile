@@ -50,74 +50,52 @@ pipeline {
         
         stage('Deploy') {
             // Temporarily disable Firebase deploy to focus on Remote deploy
-            /*
-            parallel {
-                stage('Deploy to Firebase') {
-                    steps {
-                        echo 'Deploying to Firebase...'
-                        dir('web-performance-project1-initial') {
+            stage('Deploy to Remote Server') {
+                steps {
+                    echo 'Deploying to Remote Server...'
+                    dir('web-performance-project1-initial') {
+                        sshagent(['SSH_PRIVATE_KEY']) {
                             sh '''
-                                echo "Deploying to Firebase Hosting..."
-                                # Sử dụng token với GOOGLE_APPLICATION_CREDENTIALS
-                                export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase-token.json"
-                                echo "$FIREBASE_TOKEN" > /tmp/firebase-token.json
-                                firebase deploy --only hosting --project="$FIREBASE_PROJECT" --non-interactive
-                                rm -f /tmp/firebase-token.json
+                                DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
+                                
+                                echo "Creating deployment folder: $DEPLOY_FOLDER"
+                                ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
+                                
+                                echo "Copying essential files to remote server..."
+                                # Sử dụng rsync để copy chỉ files cần thiết
+                                rsync -avz --delete \
+                                    --include="index.html" \
+                                    --include="404.html" \
+                                    --include="css/" \
+                                    --include="css/**" \
+                                    --include="js/" \
+                                    --include="js/**" \
+                                    --include="images/" \
+                                    --include="images/**" \
+                                    --exclude="*" \
+                                    -e "ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT" \
+                                    ./ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                
+                                echo "Creating symlink and cleanup..."
+                                ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
+                                    cd $DEPLOY_PATH
+                                    
+                                    # Tạo symlink current
+                                    ln -sfn deploy/$DEPLOY_DATE current
+                                    
+                                    # Giữ lại 5 folder gần nhất, xóa các folder cũ
+                                    cd deploy
+                                    ls -t | tail -n +6 | xargs -r rm -rf
+                                    
+                                    echo 'Deploy completed successfully at: $DEPLOY_TIME'
+                                    echo 'Files deployed:'
+                                    ls -la $DEPLOY_PATH/current/
+                                """
                             '''
                         }
                     }
                 }
-                
-                stage('Deploy to Remote Server') {
-            */
-            stage('Deploy to Remote Server') {
-                    steps {
-                        echo 'Deploying to Remote Server...'
-                        dir('web-performance-project1-initial') {
-                            sshagent(['SSH_PRIVATE_KEY']) {
-                                sh '''
-                                    DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
-                                    
-                                    echo "Creating deployment folder: $DEPLOY_FOLDER"
-                                    ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
-                                    
-                                    echo "Copying essential files to remote server..."
-                                    # Sử dụng rsync để copy chỉ files cần thiết
-                                    rsync -avz --delete \
-                                        --include="index.html" \
-                                        --include="404.html" \
-                                        --include="css/" \
-                                        --include="css/**" \
-                                        --include="js/" \
-                                        --include="js/**" \
-                                        --include="images/" \
-                                        --include="images/**" \
-                                        --exclude="*" \
-                                        -e "ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT" \
-                                        ./ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                    
-                                    echo "Creating symlink and cleanup..."
-                                    ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
-                                        cd $DEPLOY_PATH
-                                        
-                                        # Tạo symlink current
-                                        ln -sfn deploy/$DEPLOY_DATE current
-                                        
-                                        # Giữ lại 5 folder gần nhất, xóa các folder cũ
-                                        cd deploy
-                                        ls -t | tail -n +6 | xargs -r rm -rf
-                                        
-                                        echo 'Deploy completed successfully at: $DEPLOY_TIME'
-                                        echo 'Files deployed:'
-                                        ls -la $DEPLOY_PATH/current/
-                                    """
-                                '''
-                            }
-                        }
-                    }
-                }
-            // End of parallel block
-            */
+            }
         }
     }
     
