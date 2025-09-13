@@ -12,7 +12,14 @@ pipeline {
         REMOTE_HOST = '118.69.34.46'
         REMOTE_PORT = '3334'
         DEPLOY_PATH = '/usr/share/nginx/html/jenkins/toandk2'
-        USERNAME = 'toandk'
+        
+        // Dynamic variables
+        DEPLOY_TIME = sh(script: 'date "+%Y-%m-%d %H:%M:%S"', returnStdout: true).trim()
+        DEPLOY_DATE = sh(script: 'date "+%Y%m%d_%H%M%S"', returnStdout: true).trim()
+        GIT_AUTHOR = sh(script: 'git log -1 --pretty=format:"%an"', returnStdout: true).trim()
+        GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=format:"%s"', returnStdout: true).trim()
+        FIREBASE_URL = "https://${FIREBASE_PROJECT}.web.app"
+        REMOTE_URL = "http://${REMOTE_HOST}/jenkins/toandk2/current/"
     }
     
     stages {
@@ -61,24 +68,30 @@ pipeline {
                         dir('web-performance-project1-initial') {
                             sshagent(['SSH_PRIVATE_KEY']) {
                                 sh '''
-                                    # Tạo folder deploy với timestamp
-                                    DEPLOY_DATE=$(date +%Y%m%d_%H%M%S)
                                     DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
                                     
                                     echo "Creating deployment folder: $DEPLOY_FOLDER"
                                     ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
                                     
-                                    echo "Copying files to remote server..."
-                                    # Copy chỉ những file cần thiết
-                                    scp -o StrictHostKeyChecking=no -P $REMOTE_PORT index.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                    scp -o StrictHostKeyChecking=no -P $REMOTE_PORT 404.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                    scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT css/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                    scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT js/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                    scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT images/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                    echo "Copying essential files to remote server..."
+                                    # Sử dụng rsync để copy chỉ files cần thiết
+                                    rsync -avz --delete \
+                                        --include="index.html" \
+                                        --include="404.html" \
+                                        --include="css/" \
+                                        --include="css/**" \
+                                        --include="js/" \
+                                        --include="js/**" \
+                                        --include="images/" \
+                                        --include="images/**" \
+                                        --exclude="*" \
+                                        -e "ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT" \
+                                        ./ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
                                     
                                     echo "Creating symlink and cleanup..."
                                     ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
                                         cd $DEPLOY_PATH
+                                        
                                         # Tạo symlink current
                                         ln -sfn deploy/$DEPLOY_DATE current
                                         
@@ -86,8 +99,9 @@ pipeline {
                                         cd deploy
                                         ls -t | tail -n +6 | xargs -r rm -rf
                                         
-                                        echo 'Deploy completed successfully!'
-                                        ls -la $DEPLOY_PATH/
+                                        echo 'Deploy completed successfully at: $DEPLOY_TIME'
+                                        echo 'Files deployed:'
+                                        ls -la $DEPLOY_PATH/current/
                                     """
                                 '''
                             }
@@ -105,7 +119,16 @@ pipeline {
                 channel: '#lnd-2025-workshop',
                 color: 'good',
                 tokenCredentialId: 'SLACK_TOKEN',
-                message: "${USERNAME} deploy ${env.JOB_NAME} #${env.BUILD_NUMBER} successful! ✅\nFirebase: https://${FIREBASE_PROJECT}.web.app\nRemote: http://${REMOTE_HOST}/jenkins/${USERNAME}2/current/"
+                message: """*✅ Deployment Successful!*
+*Developer:* ${GIT_AUTHOR}
+*Commit:* ${GIT_COMMIT_MSG}
+*Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
+*Time:* ${DEPLOY_TIME}
+
+*Links:*
+• Firebase: ${FIREBASE_URL}
+• Remote Server: ${REMOTE_URL}
+• Build Logs: ${env.BUILD_URL}"""
             )
         }
         failure {
@@ -114,7 +137,12 @@ pipeline {
                 channel: '#lnd-2025-workshop',
                 color: 'danger',
                 tokenCredentialId: 'SLACK_TOKEN',
-                message: "${USERNAME} deploy ${env.JOB_NAME} #${env.BUILD_NUMBER} failed! ❌\nCheck logs: ${env.BUILD_URL}"
+                message: """*❌ Deployment Failed!*
+*Developer:* ${GIT_AUTHOR}
+*Commit:* ${GIT_COMMIT_MSG}
+*Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
+*Time:* ${DEPLOY_TIME}
+*Check Logs:* ${env.BUILD_URL}"""
             )
         }
         always {
