@@ -26,14 +26,18 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'npm install'
+                dir('web-performance-project1-initial') {
+                    sh 'npm install'
+                }
             }
         }
         
         stage('Lint/Test') {
             steps {
                 echo 'Running lint and tests...'
-                sh 'npm run test:ci'
+                dir('web-performance-project1-initial') {
+                    sh 'npm run test:ci'
+                }
             }
         }
         
@@ -42,47 +46,51 @@ pipeline {
                 stage('Deploy to Firebase') {
                     steps {
                         echo 'Deploying to Firebase...'
-                        sh '''
-                            echo "Deploying to Firebase Hosting..."
-                            firebase deploy --token "$FIREBASE_TOKEN" --only hosting --project="$FIREBASE_PROJECT" --non-interactive
-                        '''
+                        dir('web-performance-project1-initial') {
+                            sh '''
+                                echo "Deploying to Firebase Hosting..."
+                                firebase deploy --token "$FIREBASE_TOKEN" --only hosting --project="$FIREBASE_PROJECT" --non-interactive
+                            '''
+                        }
                     }
                 }
                 
                 stage('Deploy to Remote Server') {
                     steps {
                         echo 'Deploying to Remote Server...'
-                        sshagent(['SSH_PRIVATE_KEY']) {
-                            sh '''
-                                # Tạo folder deploy với timestamp
-                                DEPLOY_DATE=$(date +%Y%m%d_%H%M%S)
-                                DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
-                                
-                                echo "Creating deployment folder: $DEPLOY_FOLDER"
-                                ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
-                                
-                                echo "Copying files to remote server..."
-                                # Copy chỉ những file cần thiết
-                                scp -o StrictHostKeyChecking=no -P $REMOTE_PORT index.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                scp -o StrictHostKeyChecking=no -P $REMOTE_PORT 404.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT css/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT js/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT images/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                                
-                                echo "Creating symlink and cleanup..."
-                                ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
-                                    cd $DEPLOY_PATH
-                                    # Tạo symlink current
-                                    ln -sfn deploy/$DEPLOY_DATE current
+                        dir('web-performance-project1-initial') {
+                            sshagent(['SSH_PRIVATE_KEY']) {
+                                sh '''
+                                    # Tạo folder deploy với timestamp
+                                    DEPLOY_DATE=$(date +%Y%m%d_%H%M%S)
+                                    DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
                                     
-                                    # Giữ lại 5 folder gần nhất, xóa các folder cũ
-                                    cd deploy
-                                    ls -t | tail -n +6 | xargs -r rm -rf
+                                    echo "Creating deployment folder: $DEPLOY_FOLDER"
+                                    ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
                                     
-                                    echo 'Deploy completed successfully!'
-                                    ls -la $DEPLOY_PATH/
-                                """
-                            '''
+                                    echo "Copying files to remote server..."
+                                    # Copy chỉ những file cần thiết
+                                    scp -o StrictHostKeyChecking=no -P $REMOTE_PORT index.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                    scp -o StrictHostKeyChecking=no -P $REMOTE_PORT 404.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                    scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT css/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                    scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT js/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                    scp -o StrictHostKeyChecking=no -r -P $REMOTE_PORT images/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                    
+                                    echo "Creating symlink and cleanup..."
+                                    ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
+                                        cd $DEPLOY_PATH
+                                        # Tạo symlink current
+                                        ln -sfn deploy/$DEPLOY_DATE current
+                                        
+                                        # Giữ lại 5 folder gần nhất, xóa các folder cũ
+                                        cd deploy
+                                        ls -t | tail -n +6 | xargs -r rm -rf
+                                        
+                                        echo 'Deploy completed successfully!'
+                                        ls -la $DEPLOY_PATH/
+                                    """
+                                '''
+                            }
                         }
                     }
                 }
