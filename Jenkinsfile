@@ -48,40 +48,60 @@ pipeline {
             }
         }
         
-        stage('Deploy to Remote Server') {
-            steps {
-                echo 'Deploying to Remote Server...'
-                dir('web-performance-project1-initial') {
-                    sh '''
-                        DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
-                        
-                        echo "Creating deployment folder: $DEPLOY_FOLDER"
-                        ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
-                        
-                        echo "Copying essential files to remote server..."
-                        # Sử dụng scp để copy files cần thiết
-                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT index.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
-                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT 404.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
-                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r css/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
-                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r js/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
-                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r images/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
-                        
-                        echo "Creating symlink and cleanup..."
-                        ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
-                            cd $DEPLOY_PATH
-                            
-                            # Tạo symlink current
-                            ln -sfn deploy/$DEPLOY_DATE current
-                            
-                            # Giữ lại 5 folder gần nhất, xóa các folder cũ
-                            cd deploy
-                            ls -t | tail -n +6 | xargs -r rm -rf
-                            
-                            echo 'Deploy completed successfully at: $DEPLOY_TIME'
-                            echo 'Files deployed:'
-                            ls -la $DEPLOY_PATH/current/
-                        """
-                    '''
+        stage('Deploy') {
+            parallel {
+                stage('Deploy to Firebase') {
+                    steps {
+                        echo 'Deploying to Firebase...'
+                        dir('web-performance-project1-initial') {
+                            sh '''
+                                echo "Deploying to Firebase Hosting..."
+                                # Sử dụng token với GOOGLE_APPLICATION_CREDENTIALS
+                                export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase-token.json"
+                                echo "$FIREBASE_TOKEN" > /tmp/firebase-token.json
+                                firebase deploy --only hosting --project="$FIREBASE_PROJECT" --non-interactive
+                                rm -f /tmp/firebase-token.json
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Deploy to Remote Server') {
+                    steps {
+                        echo 'Deploying to Remote Server...'
+                        dir('web-performance-project1-initial') {
+                            sh '''
+                                DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
+                                
+                                echo "Creating deployment folder: $DEPLOY_FOLDER"
+                                ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
+                                
+                                echo "Copying essential files to remote server..."
+                                # Sử dụng scp để copy files cần thiết
+                                scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT index.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                                scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT 404.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                                scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r css/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                                scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r js/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                                scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r images/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                                
+                                echo "Creating symlink and cleanup..."
+                                ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
+                                    cd $DEPLOY_PATH
+                                    
+                                    # Tạo symlink current
+                                    ln -sfn deploy/$DEPLOY_DATE current
+                                    
+                                    # Giữ lại 5 folder gần nhất, xóa các folder cũ
+                                    cd deploy
+                                    ls -t | tail -n +6 | xargs -r rm -rf
+                                    
+                                    echo 'Deploy completed successfully at: $DEPLOY_TIME'
+                                    echo 'Files deployed:'
+                                    ls -la $DEPLOY_PATH/current/
+                                """
+                            '''
+                        }
+                    }
                 }
             }
         }
