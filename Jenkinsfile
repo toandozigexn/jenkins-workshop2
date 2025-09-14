@@ -73,8 +73,7 @@ pipeline {
             echo "Firebase: ${FIREBASE_URL}"
             echo "Build Logs: ${env.BUILD_URL}"
             
-            // Slack notification - temporarily disabled
-            /*
+            // Slack notification
             slackSend(
                 channel: '#lnd-2025-workshop',
                 color: 'good',
@@ -89,7 +88,6 @@ pipeline {
 • Firebase: ${FIREBASE_URL}
 • Build Logs: ${env.BUILD_URL}"""
             )
-            */
         }
         failure {
             echo 'Pipeline failed!'
@@ -100,8 +98,7 @@ pipeline {
             echo "Time: ${DEPLOY_TIME}"
             echo "Check Logs: ${env.BUILD_URL}"
             
-            // Slack notification - temporarily disabled
-            /*
+            // Slack notification
             slackSend(
                 channel: '#lnd-2025-workshop',
                 color: 'danger',
@@ -113,7 +110,6 @@ pipeline {
 *Time:* ${DEPLOY_TIME}
 *Check Logs:* ${env.BUILD_URL}"""
             )
-            */
         }
         always {
             echo 'Pipeline completed!'
