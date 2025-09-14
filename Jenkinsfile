@@ -5,19 +5,32 @@ pipeline {
         nodejs 'NodeJS-20'
     }
     
+    parameters {
+        string(name: 'FIREBASE_PROJECT', defaultValue: 'toandk-jenkins-workshop2', description: 'Firebase Project ID')
+        string(name: 'REMOTE_USER', defaultValue: 'newbie', description: 'Remote Server Username')
+        string(name: 'REMOTE_HOST', defaultValue: '118.69.34.46', description: 'Remote Server IP Address')
+        string(name: 'REMOTE_PORT', defaultValue: '3334', description: 'Remote Server SSH Port')
+        string(name: 'DEPLOY_PATH', defaultValue: '/usr/share/nginx/html/jenkins/toandk2', description: 'Remote Server Deploy Path')
+    }
+    
     environment {
+        // Credentials
         FIREBASE_TOKEN = credentials('FIREBASE_TOKEN')
-        FIREBASE_PROJECT = 'toandk-jenkins-workshop2'
-        REMOTE_USER = 'newbie'
-        REMOTE_HOST = '118.69.34.46'
-        REMOTE_PORT = '3334'
-        DEPLOY_PATH = '/usr/share/nginx/html/jenkins/toandk2'
         
-        // Dynamic variables
+        // Environment variables
+        FIREBASE_PROJECT = "${params.FIREBASE_PROJECT}"
+        REMOTE_USER = "${params.REMOTE_USER}"
+        REMOTE_HOST = "${params.REMOTE_HOST}"
+        REMOTE_PORT = "${params.REMOTE_PORT}"
+        DEPLOY_PATH = "${params.DEPLOY_PATH}"
+        
+        // Dynamic variables 
         DEPLOY_TIME = sh(script: 'date "+%Y-%m-%d %H:%M:%S"', returnStdout: true).trim()
         DEPLOY_DATE = sh(script: 'date "+%Y%m%d_%H%M%S"', returnStdout: true).trim()
         GIT_AUTHOR = sh(script: 'git log -1 --pretty=format:"%an"', returnStdout: true).trim()
         GIT_COMMIT_MSG = sh(script: 'git log -1 --pretty=format:"%s"', returnStdout: true).trim()
+        
+        // Dynamic URLs
         FIREBASE_URL = "https://${FIREBASE_PROJECT}.web.app"
         REMOTE_URL = "http://${REMOTE_HOST}/jenkins/toandk2/current/"
     }
@@ -111,7 +124,7 @@ pipeline {
         success {
             echo 'Pipeline succeeded!'
             echo "✅ Deployment Successful!"
-            echo "Developer: ${GIT_AUTHOR}"
+            echo "Author: ${GIT_AUTHOR}"
             echo "Commit: ${GIT_COMMIT_MSG}"
             echo "Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
             echo "Time: ${DEPLOY_TIME}"
@@ -126,7 +139,7 @@ pipeline {
                 color: 'good',
                 tokenCredentialId: 'SLACK_TOKEN',
                 message: """*✅ Deployment Successful!*
-*Developer:* ${GIT_AUTHOR}
+*Author:* ${GIT_AUTHOR}
 *Commit:* ${GIT_COMMIT_MSG}
 *Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
 *Time:* ${DEPLOY_TIME}
@@ -141,7 +154,7 @@ pipeline {
         failure {
             echo 'Pipeline failed!'
             echo "❌ Deployment Failed!"
-            echo "Developer: ${GIT_AUTHOR}"
+            echo "Author: ${GIT_AUTHOR}"
             echo "Commit: ${GIT_COMMIT_MSG}"
             echo "Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
             echo "Time: ${DEPLOY_TIME}"
@@ -154,7 +167,7 @@ pipeline {
                 color: 'danger',
                 tokenCredentialId: 'SLACK_TOKEN',
                 message: """*❌ Deployment Failed!*
-*Developer:* ${GIT_AUTHOR}
+*Author:* ${GIT_AUTHOR}
 *Commit:* ${GIT_COMMIT_MSG}
 *Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
 *Time:* ${DEPLOY_TIME}
