@@ -59,19 +59,12 @@ pipeline {
                         ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
                         
                         echo "Copying essential files to remote server..."
-                        # Sử dụng rsync để copy chỉ files cần thiết
-                        rsync -avz --delete \
-                            --include="index.html" \
-                            --include="404.html" \
-                            --include="css/" \
-                            --include="css/**" \
-                            --include="js/" \
-                            --include="js/**" \
-                            --include="images/" \
-                            --include="images/**" \
-                            --exclude="*" \
-                            -e "ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT" \
-                            ./ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                        # Sử dụng scp để copy files cần thiết
+                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT index.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT 404.html $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r css/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r js/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
+                        scp -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -P $REMOTE_PORT -r images/ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/ 2>/dev/null || true
                         
                         echo "Creating symlink and cleanup..."
                         ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
