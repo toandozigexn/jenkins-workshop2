@@ -5,24 +5,17 @@ pipeline {
         nodejs 'NodeJS-20'
     }
     
-    parameters {
-        string(name: 'FIREBASE_PROJECT', defaultValue: 'toandk-jenkins-workshop2', description: 'Firebase Project ID')
-        string(name: 'REMOTE_USER', defaultValue: 'newbie', description: 'Remote Server Username')
-        string(name: 'REMOTE_HOST', defaultValue: '118.69.34.46', description: 'Remote Server IP Address')
-        string(name: 'REMOTE_PORT', defaultValue: '3334', description: 'Remote Server SSH Port')
-        string(name: 'DEPLOY_PATH', defaultValue: '/usr/share/nginx/html/jenkins/toandk2', description: 'Remote Server Deploy Path')
-    }
-    
     environment {
         // Credentials
         FIREBASE_TOKEN = credentials('FIREBASE_TOKEN')
         
-        // Environment variables
-        FIREBASE_PROJECT = "${params.FIREBASE_PROJECT}"
-        REMOTE_USER = "${params.REMOTE_USER}"
-        REMOTE_HOST = "${params.REMOTE_HOST}"
-        REMOTE_PORT = "${params.REMOTE_PORT}"
-        DEPLOY_PATH = "${params.DEPLOY_PATH}"
+        // Configuration
+        FIREBASE_PROJECT = 'toandk-jenkins-workshop2'
+        REMOTE_USER = 'newbie'
+        REMOTE_HOST = '118.69.34.46'
+        REMOTE_PORT = '3334'
+        DEPLOY_PATH = '/usr/share/nginx/html/jenkins/toandk2'
+        ENVIRONMENT = 'prod'
         
         // Dynamic variables 
         DEPLOY_TIME = sh(script: 'date "+%Y-%m-%d %H:%M:%S"', returnStdout: true).trim()
@@ -124,6 +117,7 @@ pipeline {
         success {
             echo 'Pipeline succeeded!'
             echo "✅ Deployment Successful!"
+            echo "Environment: ${ENVIRONMENT}"
             echo "Author: ${GIT_AUTHOR}"
             echo "Commit: ${GIT_COMMIT_MSG}"
             echo "Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
