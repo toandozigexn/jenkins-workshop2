@@ -52,45 +52,43 @@ pipeline {
             steps {
                 echo 'Deploying to Remote Server...'
                 dir('web-performance-project1-initial') {
-                    sshagent(['SSH_PRIVATE_KEY']) {
-                        sh '''
-                            DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
+                    sh '''
+                        DEPLOY_FOLDER="$DEPLOY_PATH/deploy/$DEPLOY_DATE"
+                        
+                        echo "Creating deployment folder: $DEPLOY_FOLDER"
+                        ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
+                        
+                        echo "Copying essential files to remote server..."
+                        # Sử dụng rsync để copy chỉ files cần thiết
+                        rsync -avz --delete \
+                            --include="index.html" \
+                            --include="404.html" \
+                            --include="css/" \
+                            --include="css/**" \
+                            --include="js/" \
+                            --include="js/**" \
+                            --include="images/" \
+                            --include="images/**" \
+                            --exclude="*" \
+                            -e "ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT" \
+                            ./ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                        
+                        echo "Creating symlink and cleanup..."
+                        ssh -i /var/jenkins_home/.ssh/id_rsa -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
+                            cd $DEPLOY_PATH
                             
-                            echo "Creating deployment folder: $DEPLOY_FOLDER"
-                            ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "mkdir -p $DEPLOY_FOLDER"
+                            # Tạo symlink current
+                            ln -sfn deploy/$DEPLOY_DATE current
                             
-                            echo "Copying essential files to remote server..."
-                            # Sử dụng rsync để copy chỉ files cần thiết
-                            rsync -avz --delete \
-                                --include="index.html" \
-                                --include="404.html" \
-                                --include="css/" \
-                                --include="css/**" \
-                                --include="js/" \
-                                --include="js/**" \
-                                --include="images/" \
-                                --include="images/**" \
-                                --exclude="*" \
-                                -e "ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT" \
-                                ./ $REMOTE_USER@$REMOTE_HOST:$DEPLOY_FOLDER/
+                            # Giữ lại 5 folder gần nhất, xóa các folder cũ
+                            cd deploy
+                            ls -t | tail -n +6 | xargs -r rm -rf
                             
-                            echo "Creating symlink and cleanup..."
-                            ssh -o StrictHostKeyChecking=no -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST """
-                                cd $DEPLOY_PATH
-                                
-                                # Tạo symlink current
-                                ln -sfn deploy/$DEPLOY_DATE current
-                                
-                                # Giữ lại 5 folder gần nhất, xóa các folder cũ
-                                cd deploy
-                                ls -t | tail -n +6 | xargs -r rm -rf
-                                
-                                echo 'Deploy completed successfully at: $DEPLOY_TIME'
-                                echo 'Files deployed:'
-                                ls -la $DEPLOY_PATH/current/
-                            """
-                        '''
-                    }
+                            echo 'Deploy completed successfully at: $DEPLOY_TIME'
+                            echo 'Files deployed:'
+                            ls -la $DEPLOY_PATH/current/
+                        """
+                    '''
                 }
             }
         }
